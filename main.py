@@ -16,10 +16,10 @@ def main():
     # 确保输出使用UTF-8编码
     if hasattr(sys.stdout, 'reconfigure'):
         try:
-            sys.stdout.reconfigure(encoding='utf-8')
+            sys.stdout.reconfigure(encoding='utf-8') # type: ignore
         except Exception:
             pass
-    
+
     print("AI Document Translator")
     print("======================")
 
