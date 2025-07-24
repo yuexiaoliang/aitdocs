@@ -78,5 +78,6 @@ asyncio.run(async_call())
 
 本项目使用以下主要依赖：
 
-- `openai`: 用于与大模型API交互的官方Python SDK
+- `langchain`: 用于构建应用程序的语言模型框架
+- `langchain-openai`: LangChain的OpenAI集成
 - `python-dotenv`: 用于加载环境变量
