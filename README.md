@@ -89,6 +89,25 @@ python main.py -d docs/ -o docs-translated/
 python main.py -d docs/ -i "docs/ignore/*" "docs/temp/*"
 ```
 
+### 使用.aitdocsignore文件
+
+除了在命令行中指定忽略规则外，您还可以在要翻译的目录中创建一个`.aitdocsignore`文件来指定忽略规则。该文件的格式与`.gitignore`类似，每行一个忽略模式。
+
+例如，创建一个名为`.aitdocsignore`的文件，内容如下：
+```
+# 忽略临时文件
+temp/
+*.tmp
+
+# 忽略特定目录
+ignore/
+```
+
+当您运行目录翻译命令时，程序会自动读取该文件中的忽略规则：
+```bash
+python main.py -d docs/
+```
+
 ### 指定语言
 
 所有操作都支持指定源语言和目标语言：

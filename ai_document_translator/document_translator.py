@@ -142,6 +142,15 @@ class DocumentTranslator:
                     if line and not line.startswith('#'):
                         ignore_patterns.append(line)
         
+        # 读取.aitdocsignore文件中的忽略规则
+        aitdocsignore_path = os.path.join(directory_path, '.aitdocsignore')
+        if os.path.exists(aitdocsignore_path):
+            with open(aitdocsignore_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        ignore_patterns.append(line)
+        
         # 递归遍历目录
         for root, dirs, files in os.walk(directory_path):
             # 检查当前目录是否应该被忽略
