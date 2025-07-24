@@ -8,6 +8,7 @@ AI Document Translator 是一个使用阿里云大模型API进行文档翻译的
 2. 提供异步的文本翻译功能
 3. 支持多种语言之间的翻译（默认为中英文互译）
 4. 支持Markdown文档的翻译，自动处理大文件上下文限制问题
+5. 支持递归翻译目录中的所有Markdown文件，并支持忽略规则
 
 ## 技术架构
 
@@ -25,6 +26,8 @@ AI Document Translator 是一个使用阿里云大模型API进行文档翻译的
 3. **DocumentTranslator**: 文档翻译模块，专门用于翻译Markdown文档
    - 自动处理大文件分段翻译
    - 保持Markdown格式完整性
+   - 支持单文件和目录递归翻译
+   - 支持类似.gitignore的忽略规则
    - 仅支持异步调用
 
 4. **辅助函数**: 提供便捷的翻译函数
@@ -53,7 +56,13 @@ AI Document Translator 是一个使用阿里云大模型API进行文档翻译的
    - 自动处理大文件分段，避免超出模型上下文长度限制
    - 保持原有Markdown格式
 
-4. **可配置性**:
+4. **目录递归翻译**:
+   - 支持递归翻译整个目录中的Markdown文件
+   - 支持自定义忽略规则
+   - 支持读取.gitignore文件中的忽略规则
+   - 可选择输出目录保持原有目录结构
+
+5. **可配置性**:
    - 通过环境变量配置API密钥和模型参数
    - 支持自定义系统提示词
    - 可调整模型温度等参数
@@ -141,6 +150,27 @@ async def translate_document():
     return translated_content
 
 asyncio.run(translate_document())
+```
+
+### 目录递归翻译
+
+```python
+import asyncio
+from ai_document_translator import DocumentTranslator
+
+# 递归翻译目录中的所有Markdown文件
+async def translate_directory():
+    doc_translator = DocumentTranslator()
+    translated_files = await doc_translator.translate_markdown_directory(
+        "docs/",  # 源目录路径
+        source_lang="en",
+        target_lang="zh",
+        ignore_patterns=["docs/ignore/*"],  # 可选的忽略模式
+        output_directory="docs-translated/"  # 可选的输出目录
+    )
+    return translated_files
+
+asyncio.run(translate_directory())
 ```
 
 ### 自定义系统提示词

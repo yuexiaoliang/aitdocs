@@ -116,6 +116,8 @@ asyncio.run(async_translate_example())
 
 项目还提供了文档翻译功能，专门用于翻译Markdown格式的文档：
 
+### 翻译单个文件
+
 ```python
 from ai_document_translator import DocumentTranslator
 import asyncio
@@ -133,7 +135,28 @@ async def translate_document():
 asyncio.run(translate_document())
 ```
 
-文档翻译器会自动处理大文件，将其分割为适当的块以适应模型的上下文长度限制，同时保持Markdown格式的完整性。
+### 递归翻译整个目录
+
+```python
+from ai_document_translator import DocumentTranslator
+import asyncio
+
+# 递归翻译目录中的所有Markdown文件
+async def translate_directory():
+    doc_translator = DocumentTranslator()
+    translated_files = await doc_translator.translate_markdown_directory(
+        "docs/",  # 源目录路径
+        source_lang="en",
+        target_lang="zh",
+        ignore_patterns=["docs/ignore/*"],  # 可选的忽略模式
+        output_directory="docs-translated/"  # 可选的输出目录
+    )
+    return translated_files
+
+asyncio.run(translate_directory())
+```
+
+文档翻译器会自动处理大文件，将其分割为适当的块以适应模型的上下文长度限制，同时保持Markdown格式的完整性。目录翻译功能支持类似.gitignore的忽略规则。
 
 ## 依赖说明
 
