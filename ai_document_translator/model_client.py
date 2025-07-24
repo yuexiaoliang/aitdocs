@@ -26,7 +26,7 @@ class ModelClient:
         self.llm = ChatOpenAI(
             model=self.model_name,
             openai_api_key=self.api_key,
-            openai_api_base=self.base_url,
+            openai_api_base=self.base_url,  # 使用openai_api_base指定自定义API端点
             temperature=0.7
         )
     
