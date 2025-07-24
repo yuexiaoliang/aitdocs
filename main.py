@@ -1,8 +1,9 @@
 import asyncio
 import sys
 import os
+import argparse
 from dotenv import load_dotenv
-from ai_document_translator import DocumentTranslator
+from ai_document_translator import DocumentTranslator, Translator
 
 # 设置环境变量以确保UTF-8编码
 os.environ["PYTHONIOENCODING"] = "utf-8"
@@ -11,81 +12,110 @@ os.environ["PYTHONIOENCODING"] = "utf-8"
 load_dotenv()
 
 
+async def translate_text_content(content: str, source_lang: str, target_lang: str) -> str:
+    """翻译文本内容"""
+    translator = Translator()
+    return await translator.async_translate_text(content, source_lang, target_lang)
+
+
+async def translate_document(file_path: str, source_lang: str, target_lang: str, output_path: str = None) -> str:
+    """翻译单个文档"""
+    doc_translator = DocumentTranslator()
+    return await doc_translator.translate_markdown_file(file_path, source_lang, target_lang, output_path)
+
+
+async def translate_directory(
+    directory_path: str, 
+    source_lang: str, 
+    target_lang: str, 
+    ignore_patterns: list[str] = None, 
+    output_directory: str = None
+) -> list[str]:
+    """翻译目录中的所有Markdown文件"""
+    doc_translator = DocumentTranslator()
+    return await doc_translator.translate_markdown_directory(
+        directory_path, source_lang, target_lang, ignore_patterns, output_directory
+    )
+
+
 async def main():
-    """主函数，演示如何使用文档翻译器"""
+    """主函数，处理命令行参数并执行相应操作"""
     # 确保输出使用UTF-8编码
     if hasattr(sys.stdout, "reconfigure"):
         try:
-            sys.stdout.reconfigure(encoding="utf-8") # type: ignore
+            sys.stdout.reconfigure(encoding="utf-8")  # type: ignore
         except Exception:
             pass
 
+    parser = argparse.ArgumentParser(description="AI Document Translator - 翻译文本、文档或目录中的Markdown文件")
+    
+    # 添加互斥参数组（只能选择一种操作）
+    operation_group = parser.add_mutually_exclusive_group(required=True)
+    operation_group.add_argument("-t", "--text", help="要翻译的文本内容")
+    operation_group.add_argument("-f", "--file", help="要翻译的Markdown文件路径")
+    operation_group.add_argument("-d", "--directory", help="要翻译的目录路径")
+    
+    # 公共参数
+    parser.add_argument("-s", "--source-lang", default="auto", help="源语言代码（默认：auto）")
+    parser.add_argument("-l", "--target-lang", default="zh", help="目标语言代码（默认：zh）")
+    parser.add_argument("-o", "--output", help="输出文件路径（文本/文件模式）或输出目录路径（目录模式）")
+    parser.add_argument("-i", "--ignore", nargs="*", help="目录模式下的忽略规则列表")
+    
+    args = parser.parse_args()
+    
     try:
-        # 创建文档翻译器实例
-        doc_translator = DocumentTranslator()
-        print("成功初始化文档翻译器")
-
-        # 检查示例文件是否存在
-        if not os.path.exists("example-doc.md"):
-            # 创建示例文件
-            sample_content = """# Introduction
-This is a sample document for translation.
-
-## Section 1
-This section contains some example text that needs to be translated.
-
-### Subsection
-- Item 1
-- Item 2
-- Item 3
-
-## Section 2
-```python
-print("Hello, world!")
-```
-
-Finally, this is the end of the document."""
-
-            with open("example-doc.md", "w", encoding="utf-8") as f:
-                f.write(sample_content)
-            print("已创建示例文件 example-doc.md")
-
-        # 翻译单个文档
-        try:
-            translated_content = await doc_translator.translate_markdown_file(
-                "example-doc.md", source_lang="en", target_lang="zh"
+        # 处理不同的操作类型
+        if args.text:
+            # 翻译文本内容
+            print("正在翻译文本内容...")
+            translated_text = await translate_text_content(args.text, args.source_lang, args.target_lang)
+            
+            if args.output:
+                # 写入到输出文件
+                with open(args.output, "w", encoding="utf-8") as f:
+                    f.write(translated_text)
+                print(f"翻译完成，结果已保存到 {args.output}")
+            else:
+                # 直接打印到控制台
+                print("翻译结果:")
+                print(translated_text)
+                
+        elif args.file:
+            # 翻译单个文件
+            if not os.path.exists(args.file):
+                print(f"错误: 文件 {args.file} 不存在")
+                return 1
+                
+            print(f"正在翻译文件 {args.file}...")
+            translated_content = await translate_document(
+                args.file, args.source_lang, args.target_lang, args.output
             )
-            with open("example-doc-zh.md", "w", encoding="utf-8") as f:
-                f.write(translated_content)
-            print("文档翻译完成，结果保存在 example-doc-zh.md")
-        except Exception as e:
-            print(f"文档翻译失败: {e}")
-
-        # 递归翻译目录中的所有Markdown文件
-        if os.path.exists(".test-data"):
-            print("
-开始递归翻译 .test-data 目录...")
-            try:
-                translated_files = await doc_translator.translate_markdown_directory(
-                    ".test-data",
-                    source_lang="en",
-                    target_lang="zh",
-                    ignore_patterns=[".test-data/ignore-this-dir/*"],  # 可选的忽略模式
-                    output_directory=".test-data-translated"  # 输出目录
-                )
-                print(f"目录翻译完成，共翻译了 {len(translated_files)} 个文件")
-                for file in translated_files:
-                    print(f"  - {file}")
-            except Exception as e:
-                print(f"目录翻译失败: {e}")
-        else:
-            print("
-.test-data 目录不存在，跳过目录翻译示例")
-
+            
+            output_path = args.output or f"{os.path.splitext(args.file)[0]}_{args.target_lang}.md"
+            print(f"翻译完成，结果已保存到 {output_path}")
+            
+        elif args.directory:
+            # 翻译目录
+            if not os.path.exists(args.directory):
+                print(f"错误: 目录 {args.directory} 不存在")
+                return 1
+                
+            print(f"正在递归翻译目录 {args.directory}...")
+            translated_files = await translate_directory(
+                args.directory, args.source_lang, args.target_lang, args.ignore, args.output
+            )
+            
+            print(f"目录翻译完成，共翻译了 {len(translated_files)} 个文件:")
+            for file in translated_files:
+                print(f"  - {file}")
+                
     except Exception as e:
-        print(f"初始化文档翻译器时发生错误: {e}")
-        print("请检查您的环境变量配置是否正确")
+        print(f"执行过程中发生错误: {e}")
+        return 1
+        
+    return 0
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    exit_code = asyncio.run(main())
+    sys.exit(exit_code)

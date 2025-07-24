@@ -9,6 +9,7 @@ AI Document Translator 是一个使用阿里云大模型API进行文档翻译的
 3. 支持多种语言之间的翻译（默认为中英文互译）
 4. 支持Markdown文档的翻译，自动处理大文件上下文限制问题
 5. 支持递归翻译目录中的所有Markdown文件，并支持忽略规则
+6. 提供命令行接口，支持翻译文本、单个文件或整个目录
 
 ## 技术架构
 
@@ -62,7 +63,12 @@ AI Document Translator 是一个使用阿里云大模型API进行文档翻译的
    - 支持读取.gitignore文件中的忽略规则
    - 可选择输出目录保持原有目录结构
 
-5. **可配置性**:
+5. **命令行接口**:
+   - 支持翻译文本内容、单个文件或整个目录
+   - 提供参数来自定义源语言、目标语言等
+   - 支持指定输出文件或目录
+
+6. **可配置性**:
    - 通过环境变量配置API密钥和模型参数
    - 支持自定义系统提示词
    - 可调整模型温度等参数
@@ -86,10 +92,52 @@ AI Document Translator 是一个使用阿里云大模型API进行文档翻译的
 uv sync
 ```
 
-### 运行程序
+### 命令行使用
+
+程序支持通过命令行参数来指定要翻译的内容类型：
+
+#### 翻译文本内容
 
 ```bash
-uv run python main.py
+# 翻译文本内容并输出到控制台
+python main.py -t "Hello, world!"
+
+# 翻译文本内容并保存到文件
+python main.py -t "Hello, world!" -o translated.txt
+```
+
+#### 翻译单个文件
+
+```bash
+# 翻译Markdown文件，自动生成输出文件名
+python main.py -f document.md
+
+# 翻译Markdown文件并指定输出文件名
+python main.py -f document.md -o translated_document.md
+```
+
+#### 翻译目录
+
+```bash
+# 递归翻译目录中的所有Markdown文件
+python main.py -d docs/
+
+# 递归翻译目录并指定输出目录
+python main.py -d docs/ -o docs-translated/
+
+# 递归翻译目录并使用忽略规则
+python main.py -d docs/ -i "docs/ignore/*" "docs/temp/*"
+```
+
+#### 指定语言
+
+所有操作都支持指定源语言和目标语言：
+
+```bash
+# 指定源语言和目标语言
+python main.py -t "Bonjour le monde!" -s fr -l en
+python main.py -f document.md -s en -l zh
+python main.py -d docs/ -s auto -l zh
 ```
 
 ## 项目结构
@@ -199,3 +247,4 @@ asyncio.run(custom_prompt_translate())
 3. 添加翻译历史记录和缓存机制
 4. 提供Web界面或API接口
 5. 改进文档翻译的分段算法，更好地保持语义完整性
+6. 增加重试机制以提高稳定性

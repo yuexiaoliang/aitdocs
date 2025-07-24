@@ -52,19 +52,57 @@ uv sync
 pip install python-dotenv langchain langchain-openai
 ```
 
-## 运行程序
+## 命令行使用
+
+程序支持通过命令行参数来指定要翻译的内容类型：
+
+### 翻译文本内容
 
 ```bash
-uv run python main.py
+# 翻译文本内容并输出到控制台
+python main.py -t "Hello, world!"
+
+# 翻译文本内容并保存到文件
+python main.py -t "Hello, world!" -o translated.txt
 ```
 
-或者：
+### 翻译单个文件
 
 ```bash
-python main.py
+# 翻译Markdown文件，自动生成输出文件名
+python main.py -f document.md
+
+# 翻译Markdown文件并指定输出文件名
+python main.py -f document.md -o translated_document.md
 ```
 
-## 使用模型客户端
+### 翻译目录
+
+```bash
+# 递归翻译目录中的所有Markdown文件
+python main.py -d docs/
+
+# 递归翻译目录并指定输出目录
+python main.py -d docs/ -o docs-translated/
+
+# 递归翻译目录并使用忽略规则
+python main.py -d docs/ -i "docs/ignore/*" "docs/temp/*"
+```
+
+### 指定语言
+
+所有操作都支持指定源语言和目标语言：
+
+```bash
+# 指定源语言和目标语言
+python main.py -t "Bonjour le monde!" -s fr -l en
+python main.py -f document.md -s en -l zh
+python main.py -d docs/ -s auto -l zh
+```
+
+## 编程接口使用
+
+### 使用模型客户端
 
 在代码中使用 `ModelClient` 类与大模型进行交互：
 
@@ -88,7 +126,7 @@ async def async_call():
 asyncio.run(async_call())
 ```
 
-## 使用翻译模块
+### 使用翻译模块
 
 项目提供了翻译模块，可以更方便地进行文本翻译（仅支持异步API）：
 
@@ -112,11 +150,11 @@ asyncio.run(translate_with_class())
 asyncio.run(async_translate_example())
 ```
 
-## 文档翻译功能
+### 文档翻译功能
 
 项目还提供了文档翻译功能，专门用于翻译Markdown格式的文档：
 
-### 翻译单个文件
+#### 翻译单个文件
 
 ```python
 from ai_document_translator import DocumentTranslator
@@ -135,7 +173,7 @@ async def translate_document():
 asyncio.run(translate_document())
 ```
 
-### 递归翻译整个目录
+#### 递归翻译整个目录
 
 ```python
 from ai_document_translator import DocumentTranslator
