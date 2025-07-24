@@ -2,7 +2,7 @@ import os
 from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage,AIMessage,SystemMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableSequence
 
@@ -51,7 +51,7 @@ class ModelClient:
         """
         try:
             # 转换消息格式
-            langchain_messages = []
+            langchain_messages: List[BaseMessage] = []
             for msg in messages:
                 if msg["role"] == "user":
                     langchain_messages.append(HumanMessage(content=msg["content"]))
@@ -106,7 +106,7 @@ class ModelClient:
         """
         try:
             # 转换消息格式
-            langchain_messages = []
+            langchain_messages: List[BaseMessage] = []
             for msg in messages:
                 if msg["role"] == "user":
                     langchain_messages.append(HumanMessage(content=msg["content"]))
