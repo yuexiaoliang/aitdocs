@@ -47,7 +47,7 @@ async def main():
         except Exception:
             pass
 
-    parser = argparse.ArgumentParser(description="AI Document Translator - 翻译文本、文档或目录中的Markdown文件")
+    parser = argparse.ArgumentParser(description="AITdocs - 翻译文本、文档或目录中的Markdown文件")
     
     # 添加互斥参数组（只能选择一种操作）
     operation_group = parser.add_mutually_exclusive_group(required=True)

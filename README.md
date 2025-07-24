@@ -1,6 +1,6 @@
-# AI Document Translator
+# AITdocs
 
-AI Document Translator 是一个使用阿里云大模型API进行文档翻译的工具。
+AITdocs 是一个使用阿里云大模型API进行文档翻译的工具。
 
 ## 项目结构
 

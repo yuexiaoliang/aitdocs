@@ -1,8 +1,8 @@
-# AI Document Translator 项目总结
+# AITdocs 项目总结
 
 ## 项目概述
 
-AI Document Translator 是一个使用阿里云大模型API进行文档翻译的工具。该项目主要实现了以下功能：
+AITdocs 是一个使用阿里云大模型API进行文档翻译的工具。该项目主要实现了以下功能：
 
 1. 与阿里云大模型（如Qwen-Plus）进行交互
 2. 提供异步的文本翻译功能
