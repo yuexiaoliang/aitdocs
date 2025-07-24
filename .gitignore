@@ -11,3 +11,7 @@ wheels/
 
 # Environment variables
 .env
+
+.test-data
+.pytest_cache
+.mypy_cache

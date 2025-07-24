@@ -8,7 +8,9 @@ AI Document Translator 是一个使用阿里云大模型API进行文档翻译的
 ai-document-translator/
 ├── ai_document_translator/
 │   ├── __init__.py
-│   └── model_client.py     # 大模型交互模块
+│   ├── model_client.py     # 大模型交互模块
+│   ├── translator.py       # 翻译模块
+│   └── document_translator.py  # 文档翻译模块
 ├── .env                    # 环境变量配置文件
 ├── .env.example            # 环境变量配置模板
 ├── .gitignore
@@ -44,10 +46,22 @@ ai-document-translator/
 uv sync
 ```
 
+或者使用 pip 安装：
+
+```bash
+pip install python-dotenv langchain langchain-openai
+```
+
 ## 运行程序
 
 ```bash
 uv run python main.py
+```
+
+或者：
+
+```bash
+python main.py
 ```
 
 ## 使用模型客户端
@@ -73,6 +87,53 @@ async def async_call():
 
 asyncio.run(async_call())
 ```
+
+## 使用翻译模块
+
+项目提供了翻译模块，可以更方便地进行文本翻译（仅支持异步API）：
+
+```python
+from ai_document_translator import Translator, async_translate
+import asyncio
+
+# 方法1: 使用Translator类
+async def translate_with_class():
+    translator = Translator()
+    result = await translator.async_translate_text("Hello, world!", source_lang="en", target_lang="zh")
+    return result
+
+# 方法2: 使用async_translate函数
+async def async_translate_example():
+    result = await async_translate("Hello, world!", source_lang="en", target_lang="zh")
+    return result
+
+# 运行异步函数
+asyncio.run(translate_with_class())
+asyncio.run(async_translate_example())
+```
+
+## 文档翻译功能
+
+项目还提供了文档翻译功能，专门用于翻译Markdown格式的文档：
+
+```python
+from ai_document_translator import DocumentTranslator
+import asyncio
+
+# 翻译Markdown文件
+async def translate_document():
+    doc_translator = DocumentTranslator()
+    translated_content = await doc_translator.translate_markdown_file(
+        "document.md",  # 源文件路径
+        source_lang="en", 
+        target_lang="zh"
+    )
+    return translated_content
+
+asyncio.run(translate_document())
+```
+
+文档翻译器会自动处理大文件，将其分割为适当的块以适应模型的上下文长度限制，同时保持Markdown格式的完整性。
 
 ## 依赖说明
 
