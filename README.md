@@ -87,6 +87,9 @@ python main.py -d docs/ -o docs-translated/
 
 # 递归翻译目录并使用忽略规则
 python main.py -d docs/ -i "docs/ignore/*" "docs/temp/*"
+
+# 增量翻译目录（仅翻译变更的文件）
+python main.py -d docs/ --incremental
 ```
 
 ### 使用.aitdocsignore文件
@@ -118,6 +121,31 @@ python main.py -t "Bonjour le monde!" -s fr -l en
 python main.py -f document.md -s en -l zh
 python main.py -d docs/ -s auto -l zh
 ```
+
+### 增量翻译模式
+
+对于Git仓库中的文档目录，您可以使用增量翻译模式来仅翻译自上次翻译以来变更的文件。此功能通过比较Git提交历史来确定哪些文件需要重新翻译：
+
+```bash
+# 使用增量模式翻译目录
+python main.py -d docs/ --incremental
+
+# 结合其他选项使用增量模式
+python main.py -d docs/ --incremental -l en -o docs-translated/
+```
+
+增量翻译模式的工作原理：
+1. 首次运行时，会进行全量翻译并在目录中创建一个状态文件（.aitdocs_state）记录当前Git提交哈希和忽略规则
+2. 后续运行时，会比较当前Git提交与上次记录的提交之间的差异
+3. 同时检查忽略规则是否发生变化
+4. 仅翻译变更过的Markdown文件
+5. 更新状态文件中的提交哈希和忽略规则哈希
+
+注意事项：
+- 目标目录必须是Git仓库
+- 需要系统中安装了Git命令行工具
+- 如果Git命令执行失败，将自动回退到全量翻译模式
+- 当忽略规则（包括命令行参数、.gitignore文件和.aitdocsignore文件）发生变化时，会自动进行全量翻译，确保之前被忽略的文件能够被正确处理
 
 ## 编程接口使用
 
@@ -206,7 +234,8 @@ async def translate_directory():
         source_lang="en",
         target_lang="zh",
         ignore_patterns=["docs/ignore/*"],  # 可选的忽略模式
-        output_directory="docs-translated/"  # 可选的输出目录
+        output_directory="docs-translated/",  # 可选的输出目录
+        incremental=True  # 启用增量翻译模式
     )
     return translated_files
 
