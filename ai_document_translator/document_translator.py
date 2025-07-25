@@ -91,12 +91,15 @@ class DocumentTranslator:
         Returns:
             已翻译文件的路径列表
         """
+        # 预处理 ignore_patterns，避免重复计算
+        processed_ignore_patterns = self._process_ignore_patterns(directory_path, ignore_patterns)
+        
         # 获取所有Markdown文件
-        markdown_files = self._get_markdown_files(directory_path, ignore_patterns)
+        markdown_files = self._get_markdown_files(directory_path, processed_ignore_patterns)
         
         # 如果启用增量翻译，则只翻译变更的文件
         if incremental:
-            markdown_files = self._get_changed_files_with_ignores(directory_path, markdown_files, ignore_patterns)
+            markdown_files = self._get_changed_files_with_ignores(directory_path, markdown_files, processed_ignore_patterns)
             print(f"增量翻译模式: 找到 {len(markdown_files)} 个需要翻译的文件")
         
         # 翻译所有文件
@@ -131,7 +134,7 @@ class DocumentTranslator:
                 
         # 如果启用了增量翻译，保存当前的Git提交哈希和忽略规则哈希
         if incremental:
-            self._save_last_commit_hash(directory_path, ignore_patterns)
+            self._save_last_commit_hash(directory_path, processed_ignore_patterns)
         
         # 如果启用了自动提交，则提交翻译结果
         commit_success = True
@@ -144,23 +147,22 @@ class DocumentTranslator:
                 
         return translated_files
     
-    def _get_markdown_files(self, directory_path: str, ignore_patterns: Optional[List[str]] = None) -> List[str]:
+    def _process_ignore_patterns(self, directory_path: str, ignore_patterns: Optional[List[str]] = None) -> List[str]:
         """
-        获取目录中的所有Markdown文件
+        预处理忽略模式列表，统一添加默认忽略规则和从文件读取的规则
         
         Args:
             directory_path: 目录路径
             ignore_patterns: 忽略模式列表
             
         Returns:
-            Markdown文件路径列表
+            处理后的忽略模式列表
         """
-        markdown_files = []
         ignore_patterns = ignore_patterns or []
         
         # 添加默认忽略的目录和文件
         default_ignores = ['.git', '.venv', '__pycache__', '*.py', '*.pyc', '*.pyo', '*.pyd']
-        ignore_patterns.extend(default_ignores)
+        processed_ignore_patterns = ignore_patterns + default_ignores
         
         # 读取.gitignore文件中的忽略规则
         gitignore_path = os.path.join(directory_path, '.gitignore')
@@ -169,7 +171,7 @@ class DocumentTranslator:
                 for line in f:
                     line = line.strip()
                     if line and not line.startswith('#'):
-                        ignore_patterns.append(line)
+                        processed_ignore_patterns.append(line)
         
         # 读取.aitdocsignore文件中的忽略规则
         aitdocsignore_path = os.path.join(directory_path, '.aitdocsignore')
@@ -178,7 +180,22 @@ class DocumentTranslator:
                 for line in f:
                     line = line.strip()
                     if line and not line.startswith('#'):
-                        ignore_patterns.append(line)
+                        processed_ignore_patterns.append(line)
+        
+        return processed_ignore_patterns
+    
+    def _get_markdown_files(self, directory_path: str, ignore_patterns: List[str]) -> List[str]:
+        """
+        获取目录中的所有Markdown文件
+        
+        Args:
+            directory_path: 目录路径
+            ignore_patterns: 已处理的忽略模式列表
+            
+        Returns:
+            Markdown文件路径列表
+        """
+        markdown_files = []
         
         # 递归遍历目录
         for root, dirs, files in os.walk(directory_path):
@@ -442,16 +459,16 @@ class DocumentTranslator:
                 return None
         return None
     
-    def _save_last_commit_hash(self, directory_path: str, ignore_patterns: Optional[List[str]] = None) -> None:
+    def _save_last_commit_hash(self, directory_path: str, ignore_patterns: List[str]) -> None:
         """
         保存当前Git提交哈希和忽略规则到状态文件
         
         Args:
             directory_path: Git仓库路径
-            ignore_patterns: 忽略模式列表
+            ignore_patterns: 已处理的忽略模式列表
         """
         commit_hash = self._get_git_commit_hash(directory_path)
-        ignore_hash = self._calculate_ignore_hash(directory_path, ignore_patterns)
+        ignore_hash = self._calculate_ignore_hash_from_processed(ignore_patterns)
         
         if commit_hash:
             state_file = os.path.join(directory_path, '.aitdocs_state')
@@ -513,21 +530,38 @@ class DocumentTranslator:
         ignore_str = '\n'.join(all_ignore_patterns)
         return hashlib.md5(ignore_str.encode('utf-8')).hexdigest()
     
-    def _get_changed_files_with_ignores(self, directory_path: str, markdown_files: List[str], ignore_patterns: Optional[List[str]] = None) -> List[str]:
+    def _calculate_ignore_hash_from_processed(self, ignore_patterns: List[str]) -> str:
+        """
+        从已处理的忽略规则计算哈希值
+        
+        Args:
+            ignore_patterns: 已处理的忽略模式列表
+            
+        Returns:
+            忽略规则的哈希值
+        """
+        # 对忽略规则进行排序以确保一致性
+        sorted_patterns = sorted(ignore_patterns)
+        
+        # 计算哈希值
+        ignore_str = '\n'.join(sorted_patterns)
+        return hashlib.md5(ignore_str.encode('utf-8')).hexdigest()
+    
+    def _get_changed_files_with_ignores(self, directory_path: str, markdown_files: List[str], ignore_patterns: List[str]) -> List[str]:
         """
         获取自上次翻译以来需要翻译的文件列表（考虑文件变更和忽略规则变更）
         
         Args:
             directory_path: Git仓库路径
             markdown_files: 所有Markdown文件列表
-            ignore_patterns: 忽略模式列表
+            ignore_patterns: 已处理的忽略模式列表
             
         Returns:
             需要翻译的文件列表
         """
         # 获取当前提交哈希和忽略规则哈希
         current_commit = self._get_git_commit_hash(directory_path)
-        current_ignore_hash = self._calculate_ignore_hash(directory_path, ignore_patterns)
+        current_ignore_hash = self._calculate_ignore_hash_from_processed(ignore_patterns)
         
         if not current_commit:
             print("警告：当前目录不是Git仓库或Git命令不可用，将进行全量翻译")
