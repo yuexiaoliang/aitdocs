@@ -69,7 +69,10 @@ class DocumentTranslator:
         target_lang: str = "zh",
         ignore_patterns: Optional[List[str]] = None,
         output_directory: Optional[str] = None,
-        incremental: bool = False
+        incremental: bool = False,
+        auto_commit: bool = False,
+        commit_message: str = "Update translated documents",
+        auto_push: bool = False
     ) -> List[str]:
         """
         递归翻译目录中的所有Markdown文件
@@ -81,6 +84,9 @@ class DocumentTranslator:
             ignore_patterns: 忽略模式列表，支持通配符
             output_directory: 输出目录路径，如果为None则在原目录生成
             incremental: 是否启用增量翻译模式
+            auto_commit: 是否自动提交翻译结果到Git
+            commit_message: 自动提交的提交信息
+            auto_push: 是否自动推送到远程仓库
             
         Returns:
             已翻译文件的路径列表
@@ -126,6 +132,15 @@ class DocumentTranslator:
         # 如果启用了增量翻译，保存当前的Git提交哈希和忽略规则哈希
         if incremental:
             self._save_last_commit_hash(directory_path, ignore_patterns)
+        
+        # 如果启用了自动提交，则提交翻译结果
+        commit_success = True
+        if auto_commit and translated_files:
+            commit_success = self._git_commit_translated_files(directory_path, translated_files, commit_message)
+        
+        # 如果启用了自动推送且提交成功，则推送到远程仓库
+        if auto_push and commit_success and translated_files:
+            self._git_push_to_remote(directory_path)
                 
         return translated_files
     
@@ -562,3 +577,75 @@ class DocumentTranslator:
         except subprocess.CalledProcessError as e:
             print(f"警告：执行Git diff时出错，将进行全量翻译: {e}")
             return markdown_files
+    
+    def _git_commit_translated_files(self, directory_path: str, translated_files: List[str], commit_message: str) -> bool:
+        """
+        将翻译后的文件自动提交到Git仓库
+        
+        Args:
+            directory_path: Git仓库路径
+            translated_files: 翻译后的文件列表
+            commit_message: 提交信息
+            
+        Returns:
+            是否提交成功
+        """
+        try:
+            # 添加翻译后的文件到Git暂存区
+            for file_path in translated_files:
+                relative_path = os.path.relpath(file_path, directory_path)
+                subprocess.run(
+                    ['git', 'add', relative_path],
+                    cwd=directory_path,
+                    check=True,
+                    capture_output=True
+                )
+            
+            # 提交文件
+            subprocess.run(
+                ['git', 'commit', '-m', commit_message],
+                cwd=directory_path,
+                check=True,
+                capture_output=True
+            )
+            
+            print(f"成功提交 {len(translated_files)} 个翻译文件到Git仓库")
+            return True
+            
+        except subprocess.CalledProcessError as e:
+            print(f"警告：自动提交翻译文件失败: {e}")
+            return False
+        except Exception as e:
+            print(f"警告：自动提交过程中发生错误: {e}")
+            return False
+    
+    def _git_push_to_remote(self, directory_path: str) -> bool:
+        """
+        将本地提交推送到远程仓库
+        
+        Args:
+            directory_path: Git仓库路径
+            
+        Returns:
+            是否推送成功
+        """
+        try:
+            # 推送到远程仓库
+            result = subprocess.run(
+                ['git', 'push'],
+                cwd=directory_path,
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            
+            print("成功推送到远程仓库")
+            return True
+            
+        except subprocess.CalledProcessError as e:
+            print(f"警告：推送到远程仓库失败: {e}")
+            print(f"错误详情: {e.stderr}")
+            return False
+        except Exception as e:
+            print(f"警告：推送过程中发生错误: {e}")
+            return False

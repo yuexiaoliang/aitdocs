@@ -30,12 +30,16 @@ async def translate_directory(
     target_lang: str, 
     ignore_patterns: list[str] = None, 
     output_directory: str = None,
-    incremental: bool = False
+    incremental: bool = False,
+    auto_commit: bool = False,
+    commit_message: str = "Update translated documents",
+    auto_push: bool = False
 ) -> list[str]:
     """翻译目录中的所有Markdown文件"""
     doc_translator = DocumentTranslator()
     return await doc_translator.translate_markdown_directory(
-        directory_path, source_lang, target_lang, ignore_patterns, output_directory, incremental
+        directory_path, source_lang, target_lang, ignore_patterns, output_directory, 
+        incremental, auto_commit, commit_message, auto_push
     )
 
 
@@ -62,6 +66,9 @@ async def main():
     parser.add_argument("-o", "--output", help="输出文件路径（文本/文件模式）或输出目录路径（目录模式）")
     parser.add_argument("-i", "--ignore", nargs="*", help="目录模式下的忽略规则列表")
     parser.add_argument("--incremental", action="store_true", help="启用增量翻译模式（仅翻译变更的文件）")
+    parser.add_argument("--auto-commit", action="store_true", help="翻译完成后自动提交到Git仓库")
+    parser.add_argument("--commit-message", default="Update translated documents", help="自动提交的提交信息")
+    parser.add_argument("--auto-push", action="store_true", help="自动推送到远程仓库（需要先启用--auto-commit）")
     
     args = parser.parse_args()
     
@@ -104,7 +111,8 @@ async def main():
                 
             print(f"正在递归翻译目录 {args.directory}...")
             translated_files = await translate_directory(
-                args.directory, args.source_lang, args.target_lang, args.ignore, args.output, args.incremental
+                args.directory, args.source_lang, args.target_lang, args.ignore, args.output, 
+                args.incremental, args.auto_commit, args.commit_message, args.auto_push
             )
             
             print(f"目录翻译完成，共翻译了 {len(translated_files)} 个文件:")

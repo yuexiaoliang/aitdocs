@@ -14,6 +14,7 @@ ai-document-translator/
 ├── .env                    # 环境变量配置文件
 ├── .env.example            # 环境变量配置模板
 ├── .gitignore
+├── .aitdocsignore          # AITdocs忽略规则文件
 ├── main.py                 # 主程序入口
 ├── pyproject.toml          # 项目配置文件
 └── README.md               # 项目说明文件
@@ -90,6 +91,18 @@ python main.py -d docs/ -i "docs/ignore/*" "docs/temp/*"
 
 # 增量翻译目录（仅翻译变更的文件）
 python main.py -d docs/ --incremental
+
+# 翻译后自动提交到Git仓库
+python main.py -d docs/ --auto-commit
+
+# 自定义提交信息
+python main.py -d docs/ --auto-commit --commit-message "翻译更新：用户手册"
+
+# 自动推送翻译结果到远程仓库
+python main.py -d docs/ --auto-commit --auto-push
+
+# 使用所有自动化功能
+python main.py -d docs/ --incremental --auto-commit --auto-push
 ```
 
 ### 使用.aitdocsignore文件
@@ -104,6 +117,10 @@ temp/
 
 # 忽略特定目录
 ignore/
+
+# 忽略已翻译的文件（避免重复翻译）
+*_zh.md
+*_en.md
 ```
 
 当您运行目录翻译命令时，程序会自动读取该文件中的忽略规则：
@@ -146,6 +163,26 @@ python main.py -d docs/ --incremental -l en -o docs-translated/
 - 需要系统中安装了Git命令行工具
 - 如果Git命令执行失败，将自动回退到全量翻译模式
 - 当忽略规则（包括命令行参数、.gitignore文件和.aitdocsignore文件）发生变化时，会自动进行全量翻译，确保之前被忽略的文件能够被正确处理
+
+### 自动提交和推送翻译结果
+
+翻译完成后，您可以选择将翻译结果自动提交到Git仓库并推送到远程仓库：
+
+```bash
+# 翻译后自动提交
+python main.py -d docs/ --auto-commit
+
+# 使用自定义提交信息
+python main.py -d docs/ --auto-commit --commit-message "自动翻译：更新用户文档"
+
+# 自动推送（需要同时启用自动提交）
+python main.py -d docs/ --auto-commit --auto-push
+
+# 结合增量翻译使用
+python main.py -d docs/ --incremental --auto-commit --auto-push
+```
+
+自动提交功能会将所有新生成的翻译文件添加到Git暂存区并提交，自动推送功能会将提交推送到远程仓库，方便团队协作和版本管理。
 
 ## 编程接口使用
 
@@ -235,7 +272,10 @@ async def translate_directory():
         target_lang="zh",
         ignore_patterns=["docs/ignore/*"],  # 可选的忽略模式
         output_directory="docs-translated/",  # 可选的输出目录
-        incremental=True  # 启用增量翻译模式
+        incremental=True,  # 启用增量翻译模式
+        auto_commit=True,  # 启用自动提交
+        commit_message="自动翻译：更新文档",  # 提交信息
+        auto_push=True  # 启用自动推送
     )
     return translated_files
 
