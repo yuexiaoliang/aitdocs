@@ -36,7 +36,7 @@ class GitManager:
                 check=True
             )
         except subprocess.CalledProcessError as e:
-            raise Exception(f"Git命令执行失败: {' '.join(command)}: {e}")
+            raise Exception(f"Git命令执行失败: {' '.join(command)}: {e.stderr.strip()}")
     
     def get_current_commit_hash(self) -> Optional[str]:
         """
@@ -63,6 +63,10 @@ class GitManager:
             变更的文件列表
         """
         try:
+            # 验证提交哈希是否存在
+            self._run_git_command(['git', 'cat-file', '-e', f'{last_commit}^{{commit}}'])
+            self._run_git_command(['git', 'cat-file', '-e', f'{current_commit}^{{commit}}'])
+            
             result = self._run_git_command(['git', 'diff', '--name-only', last_commit, current_commit])
             
             changed_files = result.stdout.strip().split('\n')
