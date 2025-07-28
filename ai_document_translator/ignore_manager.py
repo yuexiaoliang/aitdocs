@@ -18,6 +18,25 @@ class IgnorePatternManager:
         self.directory_path = directory_path
         self.ignore_patterns = self._process_ignore_patterns(ignore_patterns or [])
         
+    def _read_ignore_file(self, file_path: str) -> List[str]:
+        """
+        读取忽略文件中的规则
+        
+        Args:
+            file_path: 忽略文件路径
+            
+        Returns:
+            忽略规则列表
+        """
+        patterns = []
+        if os.path.exists(file_path):
+            with open(file_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        patterns.append(line)
+        return patterns
+    
     def _process_ignore_patterns(self, ignore_patterns: List[str]) -> List[str]:
         """
         预处理忽略模式列表，统一添加默认忽略规则和从文件读取的规则
@@ -34,21 +53,11 @@ class IgnorePatternManager:
         
         # 读取.gitignore文件中的忽略规则
         gitignore_path = os.path.join(self.directory_path, '.gitignore')
-        if os.path.exists(gitignore_path):
-            with open(gitignore_path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith('#'):
-                        processed_ignore_patterns.append(line)
+        processed_ignore_patterns.extend(self._read_ignore_file(gitignore_path))
         
         # 读取.aitdocsignore文件中的忽略规则
         aitdocsignore_path = os.path.join(self.directory_path, '.aitdocsignore')
-        if os.path.exists(aitdocsignore_path):
-            with open(aitdocsignore_path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith('#'):
-                        processed_ignore_patterns.append(line)
+        processed_ignore_patterns.extend(self._read_ignore_file(aitdocsignore_path))
         
         return processed_ignore_patterns
     
