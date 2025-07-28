@@ -72,8 +72,10 @@ class GitManager:
             changed_files = result.stdout.strip().split('\n')
             return [f for f in changed_files if f]  # 移除空行
             
-        except Exception as e:
-            raise Exception(f"执行Git diff时出错: {e}")
+        except Exception:
+            # 如果任何一步失败，返回空列表表示无法获取变更文件
+            # 这种情况下应该进行全量翻译
+            return []
     
     def _add_files_to_git(self, files: List[str]) -> None:
         """
