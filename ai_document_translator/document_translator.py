@@ -19,7 +19,7 @@ class DocumentTranslator:
         incremental: bool = False,
         auto_commit: bool = False,
         auto_push: bool = False,
-        commit_message: str = "Update translated documents",
+        commit_message: str = "Update translated documents [aitdocs]",
         directory_path: str = ".",
         ignore_patterns: Optional[List[str]] = None,
         output_directory: Optional[str] = None,

@@ -10,7 +10,9 @@ ai-document-translator/
 │   ├── __init__.py
 │   ├── model_client.py     # 大模型交互模块
 │   ├── translator.py       # 翻译模块
-│   └── document_translator.py  # 文档翻译模块
+│   ├── document_translator.py  # 文档翻译模块
+│   ├── build_manager.py    # 构建环境管理模块
+│   └── build_cli.py        # 构建环境管理命令行接口
 ├── .env                    # 环境变量配置文件
 ├── .env.example            # 环境变量配置模板
 ├── .gitignore
@@ -103,6 +105,61 @@ python main.py -d docs/ --auto-commit --auto-push
 
 # 使用所有自动化功能
 python main.py -d docs/ --incremental --auto-commit --auto-push
+```
+
+### 构建环境管理
+
+在文档翻译完成后，您可能需要在构建过程中使用翻译后的文件替换原始文件。为此，我们提供了构建环境管理功能：
+
+#### 通过主程序使用
+
+```bash
+# 准备构建环境：将源文件替换为翻译后的文件
+python main.py -b prepare
+
+# 恢复构建环境：将备份的原始文件还原
+python main.py -b restore
+
+# 使用自定义备份后缀
+python main.py -b prepare --backup-suffix ".backup"
+```
+
+#### 通过独立命令行工具使用
+
+除了通过主程序使用构建环境管理功能外，您还可以直接使用独立的命令行工具：
+
+```bash
+# 准备构建环境
+python -m ai_document_translator.build_cli prepare
+
+# 恢复构建环境
+python -m ai_document_translator.build_cli restore
+
+# 指定目录和目标语言
+python -m ai_document_translator.build_cli prepare -d docs/ -l zh
+
+# 使用自定义备份后缀
+python -m ai_document_translator.build_cli prepare -s ".backup"
+```
+
+构建环境管理的工作原理：
+1. `prepare` 命令会备份原始文件，并用对应的翻译文件替换原始文件
+2. `restore` 命令会将备份的原始文件还原，删除替换的翻译文件
+3. 备份文件默认使用 `.aitdocs.bak` 后缀，可通过 `--backup-suffix` 参数自定义
+
+使用场景示例：
+```bash
+# 1. 翻译文档
+python main.py -d docs/ --incremental
+
+# 2. 准备构建环境
+python main.py -b prepare
+
+# 3. 执行构建过程（如生成文档网站）
+# your-build-command
+
+# 4. 恢复构建环境
+python main.py -b restore
 ```
 
 ### 使用.aitdocsignore文件
@@ -288,6 +345,27 @@ asyncio.run(translate_directory())
 - 代码块（使用```或~~~标记的）不会被分割到不同的片段中
 - 表格等复杂结构尽可能保持完整
 - 标题作为分割点的自然边界
+
+## 构建环境管理（编程接口）
+
+除了命令行接口外，您还可以在代码中使用构建环境管理功能：
+
+```python
+from ai_document_translator.build_manager import BuildManager
+
+# 创建构建管理器实例
+build_manager = BuildManager(
+    directory_path="docs/",
+    target_lang="zh",
+    backup_suffix=".aitdocs.bak"
+)
+
+# 准备构建环境
+backed_up_files = build_manager.prepare_build_environment()
+
+# 恢复构建环境
+build_manager.restore_build_environment()
+```
 
 ## 依赖说明
 
