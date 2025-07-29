@@ -140,6 +140,7 @@ class GitManager:
             if os.path.exists(cache_dir):
                 # 添加整个缓存目录到Git
                 self._run_git_command(["git", "add", ".aitdocs_cache/"])
+                self._run_git_command(["git", "commit", "-m", "Update cache files"])
         except Exception as e:
             # 如果提交缓存文件失败，仅打印警告，不中断主流程
             print(f"警告：提交缓存文件到Git时出错: {e}")
