@@ -337,6 +337,8 @@ class DocumentTranslator:
         推送提交到远程仓库
         """
         try:
+            # 在推送前先提交缓存文件
+            self.git_manager.commit_cache_files()
             self.git_manager.push_to_remote()
             print("成功推送到远程仓库")
         except Exception as e:

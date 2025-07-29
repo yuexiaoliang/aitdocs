@@ -131,6 +131,19 @@ class GitManager:
         state_file_path = self.state_manager.get_state_file_path()
         self.commit_files([state_file_path], "Update state file")
 
+    def commit_cache_files(self) -> None:
+        """
+        提交缓存文件到Git仓库
+        """
+        try:
+            cache_dir = os.path.join(self.directory_path, '.aitdocs_cache')
+            if os.path.exists(cache_dir):
+                # 添加整个缓存目录到Git
+                self._run_git_command(["git", "add", ".aitdocs_cache/"])
+        except Exception as e:
+            # 如果提交缓存文件失败，仅打印警告，不中断主流程
+            print(f"警告：提交缓存文件到Git时出错: {e}")
+
     def push_to_remote(self) -> None:
         """
         推送提交到远程仓库
