@@ -13,7 +13,7 @@ class DocumentTranslator:
 
     def __init__(
         self,
-        chunk_size: int = 2000,
+        chunk_size: int = 10000,
         source_lang: str = "auto",
         target_lang: str = "zh",
         incremental: bool = False,
