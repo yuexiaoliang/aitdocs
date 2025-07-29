@@ -1,8 +1,7 @@
 import subprocess
-import json
 import os
 from typing import List, Optional
-import textwrap
+from .state_manager import StateManager
 
 
 class GitManager:
@@ -16,7 +15,7 @@ class GitManager:
             directory_path: Git仓库路径
         """
         self.directory_path = directory_path
-        self.state_file = os.path.join(directory_path, ".aitdocs_state")
+        self.state_manager = StateManager(directory_path)
 
     def _run_git_command(self, command: List[str]) -> subprocess.CompletedProcess:
         """
@@ -127,9 +126,10 @@ class GitManager:
 
     def commit_state_file(self) -> None:
         """
-        推送当前状态文件到远程仓库
+        提交状态文件到Git仓库
         """
-        self.commit_files([self.state_file], "Update state file")
+        state_file_path = self.state_manager.get_state_file_path()
+        self.commit_files([state_file_path], "Update state file")
 
     def push_to_remote(self) -> None:
         """
@@ -147,13 +147,7 @@ class GitManager:
         Returns:
             上次翻译时的状态，如果不存在则返回None
         """
-        if os.path.exists(self.state_file):
-            try:
-                with open(self.state_file, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except (json.JSONDecodeError, KeyError):
-                return None
-        return None
+        return self.state_manager.get_last_state()
 
     def save_state(self, commit_hash: str, ignore_hash: str) -> None:
         """
@@ -163,18 +157,4 @@ class GitManager:
             commit_hash: 当前提交哈希
             ignore_hash: 忽略规则哈希
         """
-        state = {}
-        if os.path.exists(self.state_file):
-            try:
-                with open(self.state_file, "r", encoding="utf-8") as f:
-                    state = json.load(f)
-            except json.JSONDecodeError:
-                pass
-
-        state["last_commit_hash"] = commit_hash
-        state["ignore_hash"] = ignore_hash
-        try:
-            with open(self.state_file, "w", encoding="utf-8") as f:
-                json.dump(state, f, indent=2)
-        except Exception as e:
-            raise Exception(f"无法保存状态文件: {e}")
+        self.state_manager.save_state(commit_hash, ignore_hash)

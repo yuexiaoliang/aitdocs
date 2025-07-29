@@ -10,6 +10,7 @@ from .translator import Translator
 from .git_manager import GitManager
 from .ignore_manager import IgnorePatternManager
 from .markdown_splitter import MarkdownSplitter
+from .state_manager import StateManager
 
 
 class DocumentTranslator:
@@ -249,7 +250,8 @@ class DocumentTranslator:
             return markdown_files
 
         # 获取上次翻译时的状态
-        last_state = git_manager.get_last_state()
+        state_manager = StateManager(directory_path)
+        last_state = state_manager.get_last_state()
         if not last_state:
             print("提示：未找到上次翻译记录，将进行全量翻译")
             return markdown_files
@@ -310,10 +312,11 @@ class DocumentTranslator:
             # 提交后更新状态文件中的提交哈希为最新值
             latest_commit_hash = git_manager.get_current_commit_hash()
             if latest_commit_hash:
-                last_state = git_manager.get_last_state()
+                state_manager = StateManager(directory_path)
+                last_state = state_manager.get_last_state()
                 if last_state:
                     ignore_hash = last_state.get('ignore_hash', '')
-                    git_manager.save_state(latest_commit_hash, ignore_hash)
+                    state_manager.save_state(latest_commit_hash, ignore_hash)
                     git_manager.commit_state_file()
 
             return True
@@ -349,6 +352,7 @@ class DocumentTranslator:
 
         if commit_hash:
             try:
-                git_manager.save_state(commit_hash, ignore_hash)
+                state_manager = StateManager(directory_path)
+                state_manager.save_state(commit_hash, ignore_hash)
             except Exception as e:
                 print(f"警告：{e}")
