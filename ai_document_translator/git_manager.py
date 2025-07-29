@@ -139,22 +139,3 @@ class GitManager:
             self._run_git_command(["git", "push"])
         except Exception as e:
             raise Exception(f"Git推送失败: {e}")
-
-    def get_last_state(self) -> Optional[dict]:
-        """
-        获取上次翻译时保存的状态
-
-        Returns:
-            上次翻译时的状态，如果不存在则返回None
-        """
-        return self.state_manager.get_last_state()
-
-    def save_state(self, commit_hash: str, ignore_hash: str) -> None:
-        """
-        保存当前状态到状态文件
-
-        Args:
-            commit_hash: 当前提交哈希
-            ignore_hash: 忽略规则哈希
-        """
-        self.state_manager.save_state(commit_hash, ignore_hash)

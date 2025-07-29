@@ -1,11 +1,5 @@
 import os
-import re
-import asyncio
-import fnmatch
-import json
-import hashlib
-from typing import List, Optional, Set
-from pathlib import Path
+from typing import List, Optional
 from .translator import Translator
 from .git_manager import GitManager
 from .ignore_manager import IgnorePatternManager
