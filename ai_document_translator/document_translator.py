@@ -1,4 +1,5 @@
 import os
+import asyncio
 from typing import List, Optional
 from .translator import Translator
 from .git_manager import GitManager
@@ -23,6 +24,7 @@ class DocumentTranslator:
         directory_path: str = ".",
         ignore_patterns: Optional[List[str]] = None,
         output_directory: Optional[str] = None,
+        max_concurrent: int = 5,  # 添加最大并发数参数
     ):
         """
         初始化文档翻译器
@@ -38,6 +40,7 @@ class DocumentTranslator:
             directory_path: 要翻译的目录路径
             ignore_patterns: 忽略模式列表，支持通配符
             output_directory: 输出目录路径，如果为None则在原目录生成
+            max_concurrent: 最大并发翻译任务数
         """
         self.translator = Translator()
         self.chunk_size = chunk_size
@@ -51,6 +54,7 @@ class DocumentTranslator:
         self.directory_path = directory_path
         self.ignore_patterns = ignore_patterns
         self.output_directory = output_directory
+        self.max_concurrent = max_concurrent  # 保存最大并发数
 
         # 初始化管理器
         self.git_manager = GitManager(self.directory_path)
@@ -123,37 +127,30 @@ class DocumentTranslator:
             markdown_files = self._get_changed_files_with_ignores(markdown_files)
             print(f"增量翻译模式: 找到 {len(markdown_files)} 个需要翻译的文件")
 
-        # 翻译所有文件
+        # 翻译所有文件（使用并发）
         translated_files = []
-        for file_path in markdown_files:
-            try:
-                print(f"正在翻译文件: {file_path}")
-
-                # 计算相对于源目录的路径
-                relative_path = os.path.relpath(file_path, self.directory_path)
-
-                # 确定输出文件路径
-                if self.output_directory:
-                    # 创建对应的输出目录结构
-                    output_file_dir = os.path.join(
-                        self.output_directory, os.path.dirname(relative_path)
-                    )
-                    os.makedirs(output_file_dir, exist_ok=True)
-                    output_file_path = os.path.join(
-                        output_file_dir,
-                        f"{os.path.splitext(os.path.basename(file_path))[0]}_{self.target_lang}.md",
-                    )
+        if markdown_files:
+            # 使用信号量控制最大并发数
+            semaphore = asyncio.Semaphore(self.max_concurrent)
+            
+            async def translate_with_semaphore(file_path):
+                async with semaphore:
+                    return await self._translate_single_file(file_path)
+            
+            # 创建所有翻译任务
+            tasks = [translate_with_semaphore(file_path) for file_path in markdown_files]
+            
+            # 并发执行所有翻译任务
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # 处理结果
+            for i, result in enumerate(results):
+                file_path = markdown_files[i]
+                if isinstance(result, Exception):
+                    print(f"翻译文件 {file_path} 时出错: {result}")
                 else:
-                    # 在原目录生成翻译文件
-                    base_name = os.path.splitext(file_path)[0]
-                    output_file_path = f"{base_name}_{self.target_lang}.md"
-
-                # 翻译文件
-                await self.translate_markdown_file(file_path, output_file_path)
-                translated_files.append(output_file_path)
-                print(f"完成翻译: {file_path} -> {output_file_path}")
-            except Exception as e:
-                print(f"翻译文件 {file_path} 时出错: {e}")
+                    translated_files.append(result)
+                    print(f"完成翻译: {file_path} -> {result}")
 
         # 如果启用了增量翻译，保存当前的Git提交哈希和忽略规则哈希
         if self.incremental:
@@ -169,6 +166,41 @@ class DocumentTranslator:
             self._git_push_to_remote()
 
         return translated_files
+
+    async def _translate_single_file(self, file_path: str) -> str:
+        """
+        翻译单个文件的内部方法
+
+        Args:
+            file_path: 要翻译的文件路径
+
+        Returns:
+            翻译后文件的路径
+        """
+        # 计算相对于源目录的路径
+        relative_path = os.path.relpath(file_path, self.directory_path)
+
+        # 确定输出文件路径
+        if self.output_directory:
+            # 创建对应的输出目录结构
+            output_file_dir = os.path.join(
+                self.output_directory, os.path.dirname(relative_path)
+            )
+            os.makedirs(output_file_dir, exist_ok=True)
+            output_file_path = os.path.join(
+                output_file_dir,
+                f"{os.path.splitext(os.path.basename(file_path))[0]}_{self.target_lang}.md",
+            )
+        else:
+            # 在原目录生成翻译文件
+            base_name = os.path.splitext(file_path)[0]
+            output_file_path = f"{base_name}_{self.target_lang}.md"
+
+        print(f"正在翻译文件: {file_path} (并发任务数: {self.max_concurrent})")
+        # 翻译文件
+        await self.translate_markdown_file(file_path, output_file_path)
+        print(f"完成翻译: {file_path} -> {output_file_path}")
+        return output_file_path
 
     def _get_markdown_files(self) -> List[str]:
         """
