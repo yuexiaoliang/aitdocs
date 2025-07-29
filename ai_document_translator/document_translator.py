@@ -268,6 +268,11 @@ class DocumentTranslator:
             print("提示：自上次翻译以来没有文件变更")
             return []
 
+        # 确保last_commit不为None
+        if not last_commit:
+            print("提示：上次提交哈希不存在，将进行全量翻译")
+            return markdown_files
+
         try:
             # 使用git diff获取变更的文件
             changed_files = git_manager.get_changed_files(last_commit, current_commit)
@@ -285,24 +290,6 @@ class DocumentTranslator:
             print(f"警告：{e}，将进行全量翻译")
             return markdown_files
 
-    def _save_last_commit_hash(self, directory_path: str, ignore_manager: IgnorePatternManager) -> None:
-        """
-        保存当前Git提交哈希和忽略规则到状态文件
-
-        Args:
-            directory_path: Git仓库路径
-            ignore_manager: 忽略模式管理器
-        """
-        git_manager = GitManager(directory_path)
-        commit_hash = git_manager.get_current_commit_hash()
-        ignore_hash = ignore_manager.get_ignore_hash()
-
-        if commit_hash:
-            try:
-                git_manager.save_state(commit_hash, ignore_hash)
-            except Exception as e:
-                print(f"警告：{e}")
-
     def _git_commit_translated_files(self, directory_path: str, translated_files: List[str], commit_message: str) -> bool:
         """
         将翻译后的文件自动提交到Git仓库
@@ -319,6 +306,16 @@ class DocumentTranslator:
         try:
             git_manager.commit_files(translated_files, commit_message)
             print(f"成功提交 {len(translated_files)} 个翻译文件到Git仓库")
+
+            # 提交后更新状态文件中的提交哈希为最新值
+            latest_commit_hash = git_manager.get_current_commit_hash()
+            if latest_commit_hash:
+                last_state = git_manager.get_last_state()
+                if last_state:
+                    ignore_hash = last_state.get('ignore_hash', '')
+                    git_manager.save_state(latest_commit_hash, ignore_hash)
+                    git_manager.commit_state_file()
+
             return True
         except Exception as e:
             print(f"警告：{e}")
@@ -337,3 +334,21 @@ class DocumentTranslator:
             print("成功推送到远程仓库")
         except Exception as e:
             print(f"警告：{e}")
+
+    def _save_last_commit_hash(self, directory_path: str, ignore_manager: IgnorePatternManager) -> None:
+        """
+        保存当前Git提交哈希和忽略规则到状态文件
+
+        Args:
+            directory_path: Git仓库路径
+            ignore_manager: 忽略模式管理器
+        """
+        git_manager = GitManager(directory_path)
+        commit_hash = git_manager.get_current_commit_hash()
+        ignore_hash = ignore_manager.get_ignore_hash()
+
+        if commit_hash:
+            try:
+                git_manager.save_state(commit_hash, ignore_hash)
+            except Exception as e:
+                print(f"警告：{e}")

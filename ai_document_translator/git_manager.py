@@ -102,13 +102,6 @@ class GitManager:
                 # 如果添加失败，忽略错误
                 pass
 
-    def _add_state_file_to_git(self) -> None:
-        """
-        将状态文件添加到Git中
-        """
-        if os.path.exists(self.state_file):
-            self._add_files_to_git([self.state_file])
-
     def commit_files(self, files: List[str], commit_message: str) -> bool:
         """
         将文件提交到Git仓库
@@ -124,9 +117,6 @@ class GitManager:
             # 添加文件到Git暂存区
             self._add_files_to_git(files)
 
-            # 如果状态文件存在，也将其添加到暂存区
-            self._add_state_file_to_git()
-
             # 提交文件
             self._run_git_command(["git", "commit", "-m", commit_message])
 
@@ -134,6 +124,12 @@ class GitManager:
 
         except Exception as e:
             raise Exception(f"Git提交失败: {e}")
+
+    def commit_state_file(self) -> None:
+        """
+        推送当前状态文件到远程仓库
+        """
+        self.commit_files([self.state_file], "Update state file")
 
     def push_to_remote(self) -> None:
         """
@@ -180,8 +176,5 @@ class GitManager:
         try:
             with open(self.state_file, "w", encoding="utf-8") as f:
                 json.dump(state, f, indent=2)
-
-            # 将状态文件添加到git中（如果还没有被跟踪）
-            self._add_state_file_to_git()
         except Exception as e:
             raise Exception(f"无法保存状态文件: {e}")
