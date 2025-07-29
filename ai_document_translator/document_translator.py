@@ -5,6 +5,7 @@ from .git_manager import GitManager
 from .ignore_manager import IgnorePatternManager
 from .markdown_splitter import MarkdownSplitter
 from .state_manager import StateManager
+from .cache_manager import CacheManager
 
 
 class DocumentTranslator:
@@ -58,8 +59,14 @@ class DocumentTranslator:
         )
         self.state_manager = StateManager(self.directory_path)
 
+        # 初始化缓存管理器
+        cache_directory = os.path.join(self.directory_path, '.aitdocs_cache')
+        self.cache_manager = CacheManager(cache_directory)
+
     async def translate_markdown_file(
-        self, file_path: str, output_path: Optional[str] = None
+        self,
+        file_path: str,
+        output_path: Optional[str] = None
     ) -> str:
         """
         翻译Markdown文件
@@ -72,11 +79,23 @@ class DocumentTranslator:
             翻译后的内容
         """
         # 读取文件内容
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        # 翻译内容
-        translated_content = await self.translate_markdown_content(content)
+        # 检查缓存中是否有翻译结果
+        cached_content = None
+        if self.incremental:
+            cached_content = self.cache_manager.get_from_cache(content)
+
+        if cached_content:
+            translated_content = cached_content
+            print(f"从缓存中获取翻译结果: {file_path}")
+        else:
+            # 翻译内容
+            translated_content = await self.translate_markdown_content(content)
+            # 将翻译结果保存到缓存
+            if self.incremental:
+                self.cache_manager.save_to_cache(content, translated_content)
 
         # 确定输出文件路径
         if output_path is None:
@@ -84,7 +103,7 @@ class DocumentTranslator:
             output_path = f"{base_name}_{self.target_lang}.md"
 
         # 写入输出文件
-        with open(output_path, "w", encoding="utf-8") as f:
+        with open(output_path, 'w', encoding='utf-8') as f:
             f.write(translated_content)
 
         return translated_content
@@ -220,6 +239,7 @@ class DocumentTranslator:
             translated_chunks.append(translated_chunk)
 
         return "\n\n".join(translated_chunks)
+
 
     def _get_changed_files_with_ignores(self, markdown_files: List[str]) -> List[str]:
         """
