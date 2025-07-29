@@ -2,6 +2,7 @@ import asyncio
 import sys
 import os
 import argparse
+from typing import Optional, List
 from dotenv import load_dotenv
 from ai_document_translator import DocumentTranslator, Translator
 
@@ -18,29 +19,36 @@ async def translate_text_content(content: str, source_lang: str, target_lang: st
     return await translator.async_translate_text(content, source_lang, target_lang)
 
 
-async def translate_document(file_path: str, source_lang: str, target_lang: str, output_path: str = None) -> str:
+async def translate_document(file_path: str, source_lang: str, target_lang: str, output_path: Optional[str] = None) -> str:
     """翻译单个文档"""
-    doc_translator = DocumentTranslator()
-    return await doc_translator.translate_markdown_file(file_path, source_lang, target_lang, output_path)
+    doc_translator = DocumentTranslator(source_lang=source_lang, target_lang=target_lang)
+    return await doc_translator.translate_markdown_file(file_path, output_path)
 
 
 async def translate_directory(
     directory_path: str, 
     source_lang: str, 
     target_lang: str, 
-    ignore_patterns: list[str] = None, 
-    output_directory: str = None,
+    ignore_patterns: Optional[List[str]] = None, 
+    output_directory: Optional[str] = None,
     incremental: bool = False,
     auto_commit: bool = False,
     commit_message: str = "Update translated documents",
     auto_push: bool = False
 ) -> list[str]:
     """翻译目录中的所有Markdown文件"""
-    doc_translator = DocumentTranslator()
-    return await doc_translator.translate_markdown_directory(
-        directory_path, source_lang, target_lang, ignore_patterns, output_directory, 
-        incremental, auto_commit, commit_message, auto_push
+    doc_translator = DocumentTranslator(
+        source_lang=source_lang,
+        target_lang=target_lang,
+        incremental=incremental,
+        auto_commit=auto_commit,
+        auto_push=auto_push,
+        commit_message=commit_message,
+        directory_path=directory_path,
+        ignore_patterns=ignore_patterns,
+        output_directory=output_directory
     )
+    return await doc_translator.translate_markdown_directory()
 
 
 async def main():
