@@ -6,25 +6,25 @@ import hashlib
 
 class IgnorePatternManager:
     """管理忽略模式的类"""
-    
+
     def __init__(self, directory_path: str, ignore_patterns: Optional[List[str]] = None):
         """
         初始化忽略模式管理器
-        
+
         Args:
             directory_path: 目录路径
             ignore_patterns: 命令行传入的忽略模式列表
         """
         self.directory_path = directory_path
         self.ignore_patterns = self._process_ignore_patterns(ignore_patterns or [])
-        
+
     def _read_ignore_file(self, file_path: str) -> List[str]:
         """
         读取忽略文件中的规则
-        
+
         Args:
             file_path: 忽略文件路径
-            
+
         Returns:
             忽略规则列表
         """
@@ -36,39 +36,39 @@ class IgnorePatternManager:
                     if line and not line.startswith('#'):
                         patterns.append(line)
         return patterns
-    
+
     def _process_ignore_patterns(self, ignore_patterns: List[str]) -> List[str]:
         """
         预处理忽略模式列表，统一添加默认忽略规则和从文件读取的规则
-        
+
         Args:
             ignore_patterns: 忽略模式列表
-            
+
         Returns:
             处理后的忽略模式列表
         """
         # 添加默认忽略的目录和文件
-        default_ignores = ['.git', '.venv', '__pycache__', '*.py', '*.pyc', '*.pyo', '*.pyd']
+        default_ignores = ['.git', '.aitdocs_cache']
         processed_ignore_patterns = ignore_patterns + default_ignores
-        
+
         # 读取.gitignore文件中的忽略规则
         gitignore_path = os.path.join(self.directory_path, '.gitignore')
         processed_ignore_patterns.extend(self._read_ignore_file(gitignore_path))
-        
+
         # 读取.aitdocsignore文件中的忽略规则
         aitdocsignore_path = os.path.join(self.directory_path, '.aitdocsignore')
         processed_ignore_patterns.extend(self._read_ignore_file(aitdocsignore_path))
-        
+
         return processed_ignore_patterns
-    
+
     def should_ignore(self, path: str, is_dir: bool = False) -> bool:
         """
         判断路径是否应该被忽略
-        
+
         Args:
             path: 路径
             is_dir: 是否为目录
-            
+
         Returns:
             是否应该忽略
         """
@@ -90,25 +90,25 @@ class IgnorePatternManager:
                  fnmatch.fnmatch(os.path.basename(path), pattern):
                 return True
         return False
-    
+
     def get_ignore_hash(self) -> str:
         """
         计算忽略规则的哈希值
-        
+
         Returns:
             忽略规则的哈希值
         """
         # 对忽略规则进行排序以确保一致性
         sorted_patterns = sorted(self.ignore_patterns)
-        
+
         # 计算哈希值
         ignore_str = '\n'.join(sorted_patterns)
         return hashlib.md5(ignore_str.encode('utf-8')).hexdigest()
-    
+
     def get_processed_patterns(self) -> List[str]:
         """
         获取处理后的忽略模式列表
-        
+
         Returns:
             处理后的忽略模式列表
         """
