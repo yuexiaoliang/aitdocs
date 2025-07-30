@@ -82,7 +82,7 @@ async def main():
     # 添加互斥参数组（只能选择一种操作）
     operation_group = parser.add_mutually_exclusive_group(required=True)
     operation_group.add_argument("-t", "--text", help="要翻译的文本内容")
-    operation_group.add_argument("-f", "--file", help="要翻译的Markdown文件路径")
+    operation_group.add_argument("-f", "--file", help="要翻译的文件路径")
     operation_group.add_argument("-d", "--directory", help="要翻译的目录路径")
 
     # 公共参数
@@ -150,9 +150,14 @@ async def main():
                 args.file, args.source_lang, args.target_lang, args.output
             )
 
-            output_path = (
-                args.output or f"{os.path.splitext(args.file)[0]}_{args.target_lang}.md"
-            )
+            # 根据原文件扩展名生成输出文件名
+            if args.output:
+                output_path = args.output
+            else:
+                base_name = os.path.splitext(args.file)[0]
+                ext = os.path.splitext(args.file)[1]
+                output_path = f"{base_name}_{args.target_lang}{ext}"
+                
             print(f"翻译完成，结果已保存到 {output_path}")
 
         elif args.directory:

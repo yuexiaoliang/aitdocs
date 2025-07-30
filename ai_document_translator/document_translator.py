@@ -12,6 +12,12 @@ from .cache_manager import CacheManager
 class DocumentTranslator:
     """文档翻译器，专门用于翻译Markdown文档"""
 
+    # 支持的文件扩展名
+    SUPPORTED_EXTENSIONS = (".md", ".markdown", ".js", ".jsx", ".ts", ".tsx", ".mdx")
+    
+    # 代码文件扩展名
+    CODE_EXTENSIONS = (".js", ".jsx", ".ts", ".tsx")
+
     def __init__(
         self,
         chunk_size: int = 10000,
@@ -96,7 +102,7 @@ class DocumentTranslator:
             print(f"从缓存中获取翻译结果: {file_path}")
         else:
             # 翻译内容
-            translated_content = await self.translate_markdown_content(content)
+            translated_content = await self.translate_markdown_content(content, file_path)
             # 将翻译结果保存到缓存
             if self.incremental:
                 self.cache_manager.save_to_cache(content, translated_content)
@@ -104,7 +110,8 @@ class DocumentTranslator:
         # 确定输出文件路径
         if output_path is None:
             base_name = os.path.splitext(file_path)[0]
-            output_path = f"{base_name}_{self.target_lang}.md"
+            ext = os.path.splitext(file_path)[1]
+            output_path = f"{base_name}_{self.target_lang}{ext}"
 
         # 写入输出文件
         with open(output_path, 'w', encoding='utf-8') as f:
@@ -189,12 +196,13 @@ class DocumentTranslator:
             os.makedirs(output_file_dir, exist_ok=True)
             output_file_path = os.path.join(
                 output_file_dir,
-                f"{os.path.splitext(os.path.basename(file_path))[0]}_{self.target_lang}.md",
+                f"{os.path.splitext(os.path.basename(file_path))[0]}_{self.target_lang}{os.path.splitext(file_path)[1]}",
             )
         else:
             # 在原目录生成翻译文件
             base_name = os.path.splitext(file_path)[0]
-            output_file_path = f"{base_name}_{self.target_lang}.md"
+            ext = os.path.splitext(file_path)[1]
+            output_file_path = f"{base_name}_{self.target_lang}{ext}"
 
         print(f"正在翻译文件: {file_path} (并发任务数: {self.max_concurrent})")
         # 翻译文件
@@ -232,9 +240,9 @@ class DocumentTranslator:
                 )
             ]
 
-            # 查找Markdown文件
+            # 查找支持的文件类型
             for file in files:
-                if file.lower().endswith((".md", ".markdown")):
+                if file.lower().endswith(self.SUPPORTED_EXTENSIONS):
                     file_path = os.path.join(root, file)
                     relative_file_path = os.path.relpath(file_path, self.directory_path)
 
@@ -244,16 +252,43 @@ class DocumentTranslator:
 
         return markdown_files
 
-    async def translate_markdown_content(self, content: str) -> str:
+    async def translate_markdown_content(self, content: str, file_path: str = "") -> str:
         """
         翻译Markdown内容
 
         Args:
             content: Markdown内容
+            file_path: 文件路径，用于确定内容类型
 
         Returns:
             翻译后的内容
         """
+        # 根据文件扩展名确定内容类型
+        system_prompt = f"你是一个专业的技术文档翻译助手。请将用户提供的文本从{self.source_lang}翻译成{self.target_lang}。"
+        file_extension = ""
+        
+        if file_path:
+            file_extension = os.path.splitext(file_path)[1].lower()
+            if file_extension in (".md", ".markdown", ".mdx"):
+                system_prompt = f"你是一个专业的技术文档翻译助手。请将用户提供的Markdown格式文本从{self.source_lang}翻译成{self.target_lang}，" \
+                               f"保持原有的Markdown格式不变，包括标题、列表、代码块等。"
+            elif file_extension in (".js", ".jsx", ".ts", ".tsx"):
+                system_prompt = f"你是一个专业的程序员翻译助手。请将用户提供的代码注释或文档字符串从{self.source_lang}翻译成{self.target_lang}，" \
+                               f"保持代码结构不变，只翻译注释部分。"
+        
+        # 对于代码文件，我们不分割内容，直接翻译整个文件
+        if file_path and os.path.splitext(file_path)[1].lower() in self.CODE_EXTENSIONS:
+            print(f"正在翻译代码文件: {file_path}")
+            translated_content = await self.translator.async_translate_text(
+                content,
+                self.source_lang,
+                self.target_lang,
+                system_prompt=system_prompt,
+                file_extension=file_extension
+            )
+            return translated_content
+        
+        # 对于Markdown文件，使用原有的分割方式
         # 分割内容为块，同时保持Markdown结构的完整性
         chunks = self.markdown_splitter.split_content(content)
 
@@ -265,8 +300,8 @@ class DocumentTranslator:
                 chunk,
                 self.source_lang,
                 self.target_lang,
-                system_prompt=f"你是一个专业的技术文档翻译助手。请将用户提供的Markdown格式文本从{self.source_lang}翻译成{self.target_lang}，"
-                f"保持原有的Markdown格式不变，包括标题、列表、代码块等。",
+                system_prompt=system_prompt,
+                file_extension=file_extension  # 对于Markdown文件也传递扩展名
             )
             translated_chunks.append(translated_chunk)
 

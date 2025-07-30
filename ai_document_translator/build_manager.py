@@ -6,6 +6,9 @@ from typing import List
 class BuildManager:
     """构建环境管理器，用于在构建时替换和恢复文件"""
 
+    # 支持的文件扩展名
+    SUPPORTED_EXTENSIONS = ('.md', '.markdown', '.js', '.jsx', '.ts', '.tsx', '.mdx')
+
     def __init__(self, directory_path: str, target_lang: str = "zh", backup_suffix: str = ".aitdocs.bak"):
         """
         初始化构建环境管理器
@@ -31,7 +34,7 @@ class BuildManager:
         # 递归遍历目录
         for root, dirs, files in os.walk(self.directory_path):
             for file in files:
-                if file.lower().endswith(('.md', '.markdown')):
+                if file.lower().endswith(self.SUPPORTED_EXTENSIONS):
                     file_path = os.path.join(root, file)
                     markdown_files.append(file_path)
 
@@ -52,7 +55,8 @@ class BuildManager:
             try:
                 # 计算翻译后的文件路径
                 base_name = os.path.splitext(source_file)[0]
-                translated_file = f"{base_name}_{self.target_lang}.md"
+                ext = os.path.splitext(source_file)[1]
+                translated_file = f"{base_name}_{self.target_lang}{ext}"
 
                 # 检查翻译后的文件是否存在
                 if os.path.exists(translated_file):
